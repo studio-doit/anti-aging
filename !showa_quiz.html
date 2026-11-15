@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>昭和の歌謡曲 思い出しクイズ</title>
+  <style>
+    /* 全体のスタイル：目に優しく読みやすい配色と大きな文字 */
+    body {
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background-color: #fdfaf2; /* 落ち着いた生成り色 */
+      color: #222222;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      max-width: 650px;
+      width: 100%;
+      background-color: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border: 2px solid #d4c5a9;
+    }
+
+    h1 {
+      font-size: 26px;
+      text-align: center;
+      color: #5c3a21;
+      border-bottom: 3px solid #d4c5a9;
+      padding-bottom: 12px;
+      margin-top: 0;
+    }
+
+    .progress {
+      font-size: 20px;
+      font-weight: bold;
+      color: #666666;
+      margin-bottom: 12px;
+    }
+
+    .question-text {
+      font-size: 24px;
+      font-weight: bold;
+      line-height: 1.5;
+      margin-bottom: 24px;
+      background-color: #f4efe6;
+      padding: 18px;
+      border-radius: 10px;
+    }
+
+    /* 3択ボタン：押し間違いを防ぐため大きく間隔を広く */
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .choice-btn {
+      font-size: 22px;
+      font-weight: bold;
+      padding: 18px 20px;
+      background-color: #ffffff;
+      color: #1a365d;
+      border: 3px solid #2b6cb0;
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: background-color 0.2s;
+    }
+
+    .choice-btn:hover:not(:disabled) {
+      background-color: #ebf8ff;
+    }
+
+    .choice-btn:disabled {
+      cursor: default;
+      opacity: 0.85;
+    }
+
+    /* 結果と解説エリア */
+    .result-area {
+      margin-top: 24px;
+      padding: 20px;
+      border-radius: 12px;
+      display: none; /* 最初は隠しておく */
+    }
+
+    .result-correct {
+      background-color: #fff5f5;
+      border: 3px solid #e53e3e;
+    }
+
+    .result-wrong {
+      background-color: #ebf8ff;
+      border: 3px solid #3182ce;
+    }
+
+    .judge-mark {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .mark-correct {
+      color: #e53e3e; /* 正解の赤 */
+    }
+
+    .mark-wrong {
+      color: #2b6cb0; /* 不正解の青 */
+    }
+
+    .explanation {
+      font-size: 20px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    /* 次へ進む・やり直すボタン */
+    .next-btn {
+      width: 100%;
+      font-size: 22px;
+      font-weight: bold;
+      padding: 18px;
+      background-color: #2f855a;
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .next-btn:hover {
+      background-color: #276749;
+    }
+
+    /* 最終スコア画面 */
+    .final-area {
+      text-align: center;
+      display: none;
+    }
+
+    .score-text {
+      font-size: 28px;
+      font-weight: bold;
+      color: #5c3a21;
+      margin: 24px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>昭和の歌謡曲 思い出しクイズ</h1>
+
+  <!-- クイズ出題エリア -->
+  <div id="quiz-area">
+    <div class="progress" id="progress-text">第 1 問 / 全 5 問</div>
+    <div class="question-text" id="question-text">ここに問題が表示されます</div>
+    <div class="choices" id="choices-container"></div>
+
+    <!-- 〇✕と解説の表示エリア -->
+    <div class="result-area" id="result-area">
+      <div class="judge-mark" id="judge-mark"></div>
+      <div class="explanation" id="explanation-text"></div>
+      <button class="next-btn" id="next-btn" onclick="nextQuestion()">次の問題へ進む</button>
+    </div>
+  </div>
+
+  <!-- 最終結果エリア -->
+  <div class="final-area" id="final-area">
+    <div class="score-text" id="score-text"></div>
+    <p style="font-size: 20px; line-height: 1.6; margin-bottom: 24px;">
+      懐かしいメロディーや当時の思い出は蘇りましたか？<br>ぜひ周りの方ともお話ししてみてくださいね。
+    </p>
+    <button class="next-btn" onclick="restartQuiz()">もう一度最初から遊ぶ</button>
+  </div>
+</div>
+
+<script>
+  // クイズのデータ（ここを増やしたり書き換えたりして問題を追加できます）
+  const quizData = [
+    {
+      question: "昭和36年（1961年）に坂本九さんが歌って大ヒットし、アメリカでも1位になった曲はどれでしょう？",
+      choices: ["1. 上を向いて歩こう", "2. 見上げてごらん夜の星を", "3. 明日があるさ"],
+      answer: 0, // 0が1番目、1が2番目、2が3番目
+      explanation: "正解は「1. 上を向いて歩こう」です。海外では『SUKIYAKI（スキヤキ）』のタイトルで親しまれ、日本の音楽史に残る大記録を作りました。"
+    },
+    {
+      question: "昭和44年（1969年）に発売された、由紀さおりさんのデビュー曲『夜明けのスキャット』の有名な歌い出しはどれでしょう？",
+      choices: ["1. ランランラン…", "2. ルールールルル…", "3. ラララララ…"],
+      answer: 1,
+      explanation: "正解は「2. ルールールルル…」です。歌詞のない美しいスキャット（ハミングのような歌い方）が話題となり、150万枚を超える大ヒットになりました。"
+    },
+    {
+      question: "昭和50年（1975年）に布施明さんが歌い、日本レコード大賞を受賞した『シクラメンのかほり』の作詞・作曲を手がけたのは誰でしょう？",
+      choices: ["1. 井上陽水", "2. さだまさし", "3. 小椋佳"],
+      answer: 2,
+      explanation: "正解は「3. 小椋佳（おぐら けい）」さんです。当時、銀行員として働きながら数々の名曲を生み出していたことでも大きな話題になりました。"
+    },
+    {
+      question: "昭和40年（1965年）に大ヒットした、加山雄三さんの代表曲『君といつまでも』の曲中で語られる有名なセリフはどれでしょう？",
+      choices: ["1. 幸せだなあ", "2. ありがとう", "3. 愛してるよ"],
+      answer: 0,
+      explanation: "正解は「1. 幸せだなあ」です。「幸せだなあ、僕は君といる時が一番幸せなんだ…」という間奏のセリフは、当時の流行語にもなりました。"
+    },
+    {
+      question: "昭和39年（1964年）の東京オリンピックの年に発売され、三波春夫さんが歌った曲のタイトルは『東京〇〇音頭』。〇〇に入る言葉は？",
+      choices: ["1. 平和", "2. 五輪", "3. 希望"],
+      answer: 1,
+      explanation: "正解は「2. 五輪（東京五輪音頭）」です。三波春夫さんの明るく張りのある歌声とともに、日本中がオリンピックの熱気に包まれました。"
+    }
+  ];
+
+  let currentQuestionIndex = 0;
+  let score = 0;
+
+  const progressText = document.getElementById("progress-text");
+  const questionText = document.getElementById("question-text");
+  const choicesContainer = document.getElementById("choices-container");
+  const resultArea = document.getElementById("result-area");
+  const judgeMark = document.getElementById("judge-mark");
+  const explanationText = document.getElementById("explanation-text");
+  const nextBtn = document.getElementById("next-btn");
+  const quizArea = document.getElementById("quiz-area");
+  const finalArea = document.getElementById("final-area");
+  const scoreText = document.getElementById("score-text");
+
+  // 問題の表示
+  function loadQuestion() {
+    resultArea.style.display = "none";
+    choicesContainer.innerHTML = "";
+
+    const currentQuiz = quizData[currentQuestionIndex];
+    progressText.textContent = `第 ${currentQuestionIndex + 1} 問 / 全 ${quizData.length} 問`;
+    questionText.textContent = currentQuiz.question;
+
+    currentQuiz.choices.forEach((choice, index) => {
+      const button = document.createElement("button");
+      button.textContent = choice;
+      button.className = "choice-btn";
+      button.onclick = () => selectAnswer(index);
+      choicesContainer.appendChild(button);
+    });
+  }
+
+  // 答えを選んだときの処理
+  function selectAnswer(selectedIndex) {
+    const currentQuiz = quizData[currentQuestionIndex];
+    const buttons = choicesContainer.querySelectorAll(".choice-btn");
+
+    // すべてのボタンを無効化して2度押しを防ぐ
+    buttons.forEach((btn, idx) => {
+      btn.disabled = true;
+      if (idx === currentQuiz.answer) {
+        btn.style.backgroundColor = "#fed7d7"; // 正解のボタンを薄い赤に
+        btn.style.borderColor = "#e53e3e";
+      }
+    });
+
+    // 正解・不正解の判定と表示
+    resultArea.className = "result-area"; // クラスをリセット
+    if (selectedIndex === currentQuiz.answer) {
+      score++;
+      judgeMark.textContent = "〇 大正解！";
+      judgeMark.className = "judge-mark mark-correct";
+      resultArea.classList.add("result-correct");
+    } else {
+      judgeMark.textContent = "✕ 残念！";
+      judgeMark.className = "judge-mark mark-wrong";
+      resultArea.classList.add("result-wrong");
+    }
+
+    explanationText.textContent = currentQuiz.explanation;
+    resultArea.style.display = "block";
+
+    // 最後の問題ならボタンの文字を変える
+    if (currentQuestionIndex === quizData.length - 1) {
+      nextBtn.textContent = "結果を見る";
+    } else {
+      nextBtn.textContent = "次の問題へ進む";
+    }
+  }
+
+  // 次の問題へ
+  function nextQuestion() {
+    currentQuestionIndex++;
+    if (currentQuestionIndex < quizData.length) {
+      loadQuestion();
+    } else {
+      showFinalScore();
+    }
+  }
+
+  // 最終結果の表示
+  function showFinalScore() {
+    quizArea.style.display = "none";
+    finalArea.style.display = "block";
+    scoreText.textContent = `全 ${quizData.length} 問中、${score} 問正解でした！`;
+  }
+
+  // 最初からやり直す
+  function restartQuiz() {
+    currentQuestionIndex = 0;
+    score = 0;
+    finalArea.style.display = "none";
+    quizArea.style.display = "block";
+    loadQuestion();
+  }
+
+  // 初回読み込み
+  loadQuestion();
+</script>
+
+</body>
+</html>
