@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>昭和の歌謡曲 思い出しクイズ</title>
+  <title>昭和の歌謡曲 思い出しクイズ（効果音付き）</title>
   <style>
     /* 全体のスタイル：目に優しく読みやすい配色と大きな文字 */
     body {
@@ -86,7 +86,7 @@
       margin-top: 24px;
       padding: 20px;
       border-radius: 12px;
-      display: none; /* 最初は隠しておく */
+      display: none;
     }
 
     .result-correct {
@@ -161,7 +161,7 @@
     <div class="question-text" id="question-text">ここに問題が表示されます</div>
     <div class="choices" id="choices-container"></div>
 
-    <!-- 〇✕と解説の表示エリア -->
+    <!-- 〇?と解説の表示エリア -->
     <div class="result-area" id="result-area">
       <div class="judge-mark" id="judge-mark"></div>
       <div class="explanation" id="explanation-text"></div>
@@ -180,12 +180,85 @@
 </div>
 
 <script>
-  // クイズのデータ（ここを増やしたり書き換えたりして問題を追加できます）
+  // --- 効果音を作るプログラム（外部の音声ファイル不要） ---
+  let audioCtx = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  // 正解音「ピンポーン♪」
+  function playCorrectSound() {
+    initAudio();
+    const now = audioCtx.currentTime;
+
+    // 1音目「ピン」（高いミ：659.25Hz）
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(659.25, now);
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.3);
+
+    // 2音目「ポーン」（高いド：523.25Hz）
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(523.25, now + 0.18);
+    gain2.gain.setValueAtTime(0.3, now + 0.18);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now + 0.18);
+    osc2.stop(now + 0.8);
+  }
+
+  // 不正解音「ブブー」
+  function playWrongSound() {
+    initAudio();
+    const now = audioCtx.currentTime;
+
+    // 1回目「ブッ」（低い音：140Hz）
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'sawtooth'; // ブザーらしい音色
+    osc1.frequency.setValueAtTime(140, now);
+    gain1.gain.setValueAtTime(0.2, now);
+    gain1.gain.linearRampToValueAtTime(0.01, now + 0.15);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.15);
+
+    // 2回目「ブー」（低い音：140Hz）
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(140, now + 0.22);
+    gain2.gain.setValueAtTime(0.2, now + 0.22);
+    gain2.gain.linearRampToValueAtTime(0.01, now + 0.55);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now + 0.22);
+    osc2.stop(now + 0.55);
+  }
+  // ----------------------------------------------------
+
+  // クイズのデータ
   const quizData = [
     {
       question: "昭和36年（1961年）に坂本九さんが歌って大ヒットし、アメリカでも1位になった曲はどれでしょう？",
       choices: ["1. 上を向いて歩こう", "2. 見上げてごらん夜の星を", "3. 明日があるさ"],
-      answer: 0, // 0が1番目、1が2番目、2が3番目
+      answer: 0,
       explanation: "正解は「1. 上を向いて歩こう」です。海外では『SUKIYAKI（スキヤキ）』のタイトルで親しまれ、日本の音楽史に残る大記録を作りました。"
     },
     {
@@ -251,24 +324,24 @@
     const currentQuiz = quizData[currentQuestionIndex];
     const buttons = choicesContainer.querySelectorAll(".choice-btn");
 
-    // すべてのボタンを無効化して2度押しを防ぐ
     buttons.forEach((btn, idx) => {
       btn.disabled = true;
       if (idx === currentQuiz.answer) {
-        btn.style.backgroundColor = "#fed7d7"; // 正解のボタンを薄い赤に
+        btn.style.backgroundColor = "#fed7d7";
         btn.style.borderColor = "#e53e3e";
       }
     });
 
-    // 正解・不正解の判定と表示
-    resultArea.className = "result-area"; // クラスをリセット
+    resultArea.className = "result-area";
     if (selectedIndex === currentQuiz.answer) {
+      playCorrectSound(); // 正解音を鳴らす
       score++;
       judgeMark.textContent = "〇 大正解！";
       judgeMark.className = "judge-mark mark-correct";
       resultArea.classList.add("result-correct");
     } else {
-      judgeMark.textContent = "✕ 残念！";
+      playWrongSound(); // 不正解音を鳴らす
+      judgeMark.textContent = "? 残念！";
       judgeMark.className = "judge-mark mark-wrong";
       resultArea.classList.add("result-wrong");
     }
@@ -276,7 +349,6 @@
     explanationText.textContent = currentQuiz.explanation;
     resultArea.style.display = "block";
 
-    // 最後の問題ならボタンの文字を変える
     if (currentQuestionIndex === quizData.length - 1) {
       nextBtn.textContent = "結果を見る";
     } else {
