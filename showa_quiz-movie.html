@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>昭和の歌謡曲 思い出しクイズ（効果音付き）</title>
+
+
+<!--コードの後半にある const quizData = [ ... ]; の中身を書き換えるだけで、
+
+問題数を10問でも20問でも自由に増やせます
+
+（answer の数字は、1番目が 0、2番目が 1、3番目が 2 に対応しています）。
+
+
+-->
+
+  <style>
+    /* 全体のスタイル：目に優しく読みやすい配色と大きな文字 */
+    body {
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background-color: #fdfaf2; /* 落ち着いた生成り色 */
+      color: #222222;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      max-width: 650px;
+      width: 100%;
+      background-color: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border: 2px solid #d4c5a9;
+    }
+
+    h1 {
+      font-size: 26px;
+      text-align: center;
+      color: #5c3a21;
+      border-bottom: 3px solid #d4c5a9;
+      padding-bottom: 12px;
+      margin-top: 0;
+    }
+
+    .progress {
+      font-size: 20px;
+      font-weight: bold;
+      color: #666666;
+      margin-bottom: 12px;
+    }
+
+    .question-text {
+      font-size: 24px;
+      font-weight: bold;
+      line-height: 1.5;
+      margin-bottom: 24px;
+      background-color: #f4efe6;
+      padding: 18px;
+      border-radius: 10px;
+    }
+
+    /* 3択ボタン：押し間違いを防ぐため大きく間隔を広く */
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .choice-btn {
+      font-size: 22px;
+      font-weight: bold;
+      padding: 18px 20px;
+      background-color: #ffffff;
+      color: #1a365d;
+      border: 3px solid #2b6cb0;
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: background-color 0.2s;
+    }
+
+    .choice-btn:hover:not(:disabled) {
+      background-color: #ebf8ff;
+    }
+
+    .choice-btn:disabled {
+      cursor: default;
+      opacity: 0.85;
+    }
+
+    /* 結果と解説エリア */
+    .result-area {
+      margin-top: 24px;
+      padding: 20px;
+      border-radius: 12px;
+      display: none;
+    }
+
+    .result-correct {
+      background-color: #fff5f5;
+      border: 3px solid #e53e3e;
+    }
+
+    .result-wrong {
+      background-color: #ebf8ff;
+      border: 3px solid #3182ce;
+    }
+
+    .judge-mark {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .mark-correct {
+      color: #e53e3e; /* 正解の赤 */
+    }
+
+    .mark-wrong {
+      color: #2b6cb0; /* 不正解の青 */
+    }
+
+    .explanation {
+      font-size: 20px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    /* 次へ進む・やり直すボタン */
+    .next-btn {
+      width: 100%;
+      font-size: 22px;
+      font-weight: bold;
+      padding: 18px;
+      background-color: #2f855a;
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .next-btn:hover {
+      background-color: #276749;
+    }
+
+    /* 最終スコア画面 */
+    .final-area {
+      text-align: center;
+      display: none;
+    }
+
+    .score-text {
+      font-size: 28px;
+      font-weight: bold;
+      color: #5c3a21;
+      margin: 24px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>昭和の歌謡曲 思い出しクイズ</h1>
+
+  <!-- クイズ出題エリア -->
+  <div id="quiz-area">
+    <div class="progress" id="progress-text">第 1 問 / 全 5 問</div>
+    <div class="question-text" id="question-text">ここに問題が表示されます</div>
+    <div class="choices" id="choices-container"></div>
+
+    <!-- 〇?と解説の表示エリア -->
+    <div class="result-area" id="result-area">
+      <div class="judge-mark" id="judge-mark"></div>
+      <div class="explanation" id="explanation-text"></div>
+      <button class="next-btn" id="next-btn" onclick="nextQuestion()">次の問題へ進む</button>
+    </div>
+  </div>
+
+  <!-- 最終結果エリア -->
+  <div class="final-area" id="final-area">
+    <div class="score-text" id="score-text"></div>
+    <p style="font-size: 20px; line-height: 1.6; margin-bottom: 24px;">
+      懐かしいメロディーや当時の思い出は蘇りましたか？<br>ぜひ周りの方ともお話ししてみてくださいね。
+    </p>
+    <button class="next-btn" onclick="restartQuiz()">もう一度最初から遊ぶ</button>
+  </div>
+
+
+<br>
+<center><img src="
+https://doit-st.jp/mobile/image/S-logo-studiodoit.png"></center>
+
+</div>
+
+
+
+<script>
+  // --- 効果音を作るプログラム（外部の音声ファイル不要） ---
+  let audioCtx = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  // 正解音「ピンポーン♪」
+  function playCorrectSound() {
+    initAudio();
+    const now = audioCtx.currentTime;
+
+    // 1音目「ピン」（高いミ：659.25Hz）
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(659.25, now);
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.3);
+
+    // 2音目「ポーン」（高いド：523.25Hz）
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(523.25, now + 0.18);
+    gain2.gain.setValueAtTime(0.3, now + 0.18);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now + 0.18);
+    osc2.stop(now + 0.8);
+  }
+
+  // 不正解音「ブブー」
+  function playWrongSound() {
+    initAudio();
+    const now = audioCtx.currentTime;
+
+    // 1回目「ブッ」（低い音：140Hz）
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'sawtooth'; // ブザーらしい音色
+    osc1.frequency.setValueAtTime(140, now);
+    gain1.gain.setValueAtTime(0.2, now);
+    gain1.gain.linearRampToValueAtTime(0.01, now + 0.15);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.15);
+
+    // 2回目「ブー」（低い音：140Hz）
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(140, now + 0.22);
+    gain2.gain.setValueAtTime(0.2, now + 0.22);
+    gain2.gain.linearRampToValueAtTime(0.01, now + 0.55);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now + 0.22);
+    osc2.stop(now + 0.55);
+  }
+  // ----------------------------------------------------
+
+  // クイズのデータ
+  const quizData = [
+    {
+      question: "昭和28年（1953年）に公開され、オードリー・ヘップバーンが王女役を演じて一躍スターとなったロマンチック・コメディのタイトルはどれでしょう？",
+      choices: ["1. 麗しのサブリナ", "2. ローマの休日", "3. ティファニーで朝食を"],
+      answer: 1,
+      explanation: "正解は「2. ローマの休日」です。ローマの街並みをスクーターで走る姿や、真実の口でのシーンなど、今も色褪せない名作ですね。"
+    },
+    {
+      question: "昭和29年（1954年）に公開され、特撮映画の歴史を切り開いた日本映画の怪獣第1作といえばどれでしょう？",
+      choices: ["1. ゴジラ", "2. ガメラ", "3. モスラ"],
+      answer: 0,
+      explanation: "正解は「1. ゴジラ」です。円谷英二さんの特撮技術と重厚な音楽が相まって、公開当時から大きな衝撃と話題を呼びました。"
+    },
+    {
+      question: "昭和29年（1954年）に黒澤明監督が撮り上げ、後の世界の映画にも大きな影響を与えた時代劇の名作はどれでしょう？",
+      choices: ["1. 羅生門", "2. 七人の侍", "3. 用心棒"],
+      answer: 1,
+      explanation: "正解は「2. 七人の侍」です。農村を野盗から守るために集まった侍たちの人間ドラマと、雨中の決戦シーンが強く印象に残っています。"
+    },
+    {
+      question: "昭和30年（1955年）に公開され、ジェームズ・ディーンが若者の孤独と反抗を演じて伝説となった青春映画はどれでしょう？",
+      choices: ["1. エデンの東", "2. 理由なき反抗", "3. ジャイアンツ"],
+      answer: 1,
+      explanation: "正解は「2. 理由なき反抗」です。赤いジャンパー姿のジェームズ・ディーンは、当時の世界中の若者たちの心を強く揺さぶりました。"
+    },
+    {
+      question: "昭和32年（1957年）に公開され、石原裕次郎さんが一躍「太陽族」のスターとして注目を集めた青春映画はどれでしょう？",
+      choices: ["1. 狂った果実", "2. 嵐を呼ぶ男", "3. 幕末太陽傳"],
+      answer: 0,
+      explanation: "正解は「1. 狂った果実」です。湘南の海やヨットを背景にした鮮烈な映像と、弟の石原慎太郎さん原作の物語が大きな話題になりました。"
+    },
+    {
+      question: "昭和32年（1957年）に公開され、日活の黄金期を象徴するヒット曲とともに石原裕次郎さんが主演した映画はどれでしょう？",
+      choices: ["1. 錆びたナイフ", "2. 嵐を呼ぶ男", "3. 紅の翼"],
+      answer: 1,
+      explanation: "正解は「2. 嵐を呼ぶ男」です。ドラムを叩く姿と主題歌「♪オイラはドラマー?」のフレーズは、今も多くの人の記憶に残っています。"
+    },
+    {
+      question: "昭和33年（1958年）に公開され、川島雄三監督・フランキー堺さん主演で庶民のユーモアとペーソスを描いた喜劇はどれでしょう？",
+      choices: ["1. 幕末太陽傳", "2. 駅前旅館", "3. 喜劇 駅前飯店"],
+      answer: "0",
+      explanation: "正解は「1. 幕末太陽傳」です。江戸末期の品川宿を舞台に、とぼけた魅力あふれる佐平次が巻き起こす痛快な人情喜劇です。"
+    },
+    {
+      question: "昭和34年（1959年）に公開され、戦車隊の激しい戦闘と人間模様を描いた大作戦争映画はどれでしょう？",
+      choices: ["1. 戦場にかける橋", "2. 史上最大の作戦", "3. 大脱走"],
+      answer: 0,
+      explanation: "正解は「1. 戦場にかける橋」です。捕虜となったイギリス兵たちが橋を架ける物語と、口笛でおなじみの「クワイ河マーチ」が大ヒットしました。"
+    },
+    {
+      question: "昭和35年（1960年）に公開され、アラン・ドロンさんが太陽のまぶしい南仏の青年を演じて人気を決定づけたサスペンス映画はどれでしょう？",
+      choices: ["1. 太陽がいっぱい", "2. 地下室のメロディ", "3. 冒険者たち"],
+      answer: 0,
+      explanation: "正解は「1. 太陽がいっぱい」です。美しい地中海の風景とは対照的なスリリングな展開と、アラン・ドロンの美しさが話題になりました。"
+    },
+    {
+      question: "昭和36年（1961年）に公開され、レナード・バーンスタインの音楽と激しいダンスで魅了したミュージカル映画はどれでしょう？",
+      choices: ["1. サウンド・オブ・ミュージック", "2. マイ・フェア・レディ", "3. ウエスト・サイド物語"],
+      answer: 2,
+      explanation: "正解は「3. ウエスト・サイド物語」です。ニューヨークの街を舞台にした切ない恋物語と、躍動感あふれるダンスシーンが名高い作品です。"
+    },
+    {
+      question: "昭和36年（1961年）に公開され、植木等さん主演で「無責任」の言葉が流行語となったコメディ映画はどれでしょう？",
+      choices: ["1. ニッポン無責任時代", "2. クレージー黄金作戦", "3. 日本一の男の中の男"],
+      answer: 0,
+      explanation: "正解は「1. ニッポン無責任時代」です。「♪無責任だなぁ?」と陽気にすり抜けていく主人公の姿が、高度経済成長期の世相と重なって大ヒットしました。"
+    },
+    {
+      question: "昭和37年（1962年）に公開され、吉永小百合さんと浜田光夫さんのコンビで青春映画ブームを牽引した作品といえばどれでしょう？",
+      choices: ["1. いつでも夢を", "2. 泥だらけの純情", "3. 愛と死をみつめて"],
+      answer: 1,
+      explanation: "正解は「2. 泥だらけの純情」です。厳しい環境の中でも真っ直ぐに生きる若者たちの姿を描き、日活青春映画の代表作となりました。"
+    },
+    {
+      question: "昭和37年（1962年）に公開され、砂漠の戦いを壮大なスケールで描きアカデミー賞作品賞を受賞した歴史スペクタクルはどれでしょう？",
+      choices: ["1. アラビアのロレンス", "2. 巴里は燃えているか", "3. ドクトル・ジバゴ"],
+      answer: 0,
+      explanation: "正解は「1. アラビアのロレンス」です。ピーター・オトゥールさん演じるロレンスと、広大な砂漠の映像美が映画館のスクリーンに映えました。"
+    },
+    {
+      question: "昭和38年（1963年）に公開され、第二次世界大戦中の捕虜収容所からの脱走劇を描いた痛快アクション映画はどれでしょう？",
+      choices: ["1. 砲艦サンパブロ", "2. 大脱走", "3. 荒野の七人"],
+      answer: 1,
+      explanation: "正解は「2. 大脱走」です。スティーブ・マックイーンさんがオートバイで柵を飛び越えるシーンや、勇ましいテーマ曲は今も大人気です。"
+    },
+    {
+      question: "昭和39年（1964年）に公開され、ロンドンの下町の花売り娘が上流階級の紳士のレッスンで変身を遂げるミュージカル映画はどれでしょう？",
+      choices: ["1. マイ・フェア・レディ", "2. メリー・ポピンズ", "3. 王様と私"],
+      answer: 0,
+      explanation: "正解は「1. マイ・フェア・レディ」です。オードリー・ヘップバーンさんの華やかなドレス姿と「♪スペインの雨?」などの楽しい歌が魅力でした。"
+    },
+    {
+      question: "昭和40年（1965年）に公開され、アルプスの大自然と家族の愛、美しい歌声を描いた大ヒットミュージカル映画はどれでしょう？",
+      choices: ["1. サウンド・オブ・ミュージック", "2. オズの魔法使", "3. 回転木馬"],
+      answer: 0,
+      explanation: "正解は「1. サウンド・オブ・ミュージック」です。「ドレミの歌」や「エーデルワイス」など、誰もが口ずさめる名曲があふれています。"
+    },
+    {
+      question: "昭和40年（1965年）に公開され、高倉健さん主演で任侠映画ブームの大きな流れを作ったシリーズ第1作といえばどれでしょう？",
+      choices: ["1. 昭和残侠伝", "2. 網走番外地", "3. 日本侠客伝"],
+      answer: 1,
+      explanation: "正解は「2. 網走番外地」です。雪原の風景と主題歌とともに、不器用ながらも義理人情を貫く主人公の姿が多くの観客を魅了しました。"
+    },
+    {
+      question: "昭和40年（1965年）に公開され、ロシア革命前後の激動の時代を壮大な愛の物語として描いた名作はどれでしょう？",
+      choices: ["1. アンナ・カレーニナ", "2. ドクトル・ジバゴ", "3. 戦争と平和"],
+      answer: 1,
+      explanation: "正解は「2. ドクトル・ジバゴ」です。切ない「ラーラのテーマ」のメロディーとともに、雪景色と波乱の運命が深く心に残る作品です。"
+    },
+    {
+      question: "昭和42年（1967年）に公開され、ギャングの姉弟が銀行強盗を重ねながら逃避行を続けるアメリカン・ニューシネマの代表作はどれでしょう？",
+      choices: ["1. 俺たちに明日はない", "2. 明日に向って撃て！", "3. イージー・ライダー"],
+      answer: 0,
+      explanation: "正解は「1. 俺たちに明日はない」です。ウォーレン・ Beattyさんとフェイ・ダナウェイさんのファッションも真似されるほど話題になりました。"
+    },
+    {
+      question: "昭和44年（1969年）に公開され、ポール・ニューマンとロバート・レッドフォードのコンビで人気を博した西部劇はどれでしょう？",
+      choices: ["1. 荒野の七人", "2. 明日に向って撃て！", "3. 駅馬車"],
+      answer: 1,
+      explanation: "正解は「2. 明日に向って撃て！」です。二人の軽妙な掛け合いと、自転車に乗るシーンで流れる「雨にぬれても」が大ヒットしました。"
+    },
+    {
+      question: "昭和44年（1969年）に公開され、渥美清さん演じる「フーテンの寅」が初めてスクリーンに登場したシリーズ第1作はどれでしょう？",
+      choices: ["1. 男はつらいよ", "2. 続・男はつらいよ", "3. 寅次郎恋歌"],
+      answer: 0,
+      explanation: "正解は「1. 男はつらいよ」です。葛飾柴又を舞台に、旅先で恋をしては振られる寅さんの人情味あふれる姿は、長きにわたり愛され続けました。"
+    },
+    {
+      question: "昭和24年（1949年）に公開され、原節子さん演じるヒロインが鎌倉から東京へ嫁ぐ姿を通して戦後家族の機微を描いた小津安二郎監督の名作はどれでしょう？",
+      choices: ["1. 晩春", "2. 東京物語", "3. 秋刀魚の味"],
+      answer: 0,
+      explanation: "正解は「1. 晩春」です。父と娘の静かで深い愛情が繊細に描かれ、日本映画史を代表する名作として高く評価されています。"
+    },
+    {
+      question: "昭和28年（1953年）に公開され、尾道から東京の子どもたちを訪ねてきた老夫婦の姿を描いた小津安二郎監督の代表作はどれでしょう？",
+      choices: ["1. 麦秋", "2. 東京物語", "3. お早よう"],
+      answer: 1,
+      explanation: "正解は「2. 東京物語」です。笠智衆さんと東山千栄子さん演じる老夫婦の心情と、家族のすれ違いが胸に迫る作品です。"
+    },
+    {
+      question: "昭和31年（1956年）に公開され、石原裕次郎さんが一躍スターダムへと駆け上がるきっかけとなった日活映画はどれでしょう？",
+      choices: ["1. 太陽の季節", "2. 乳母車", "3. 勝利者"],
+      answer: 0,
+      explanation: "正解は「1. 太陽の季節」です。戦後の新しい世代の感覚を描いて大きな話題となり、ここから「裕ちゃん」ブームが広がっていきました。"
+    },
+    {
+      question: "昭和45年（1970年）の大阪万博の年に公開され、戦場の軍医たちのブラックユーモアを描いたコメディ映画はどれでしょう？",
+      choices: ["1. 砲撃隊", "2. マッシュ（M*A*S*H）", "3. キャッチ22"],
+      answer: 1,
+      explanation: "正解は「2. マッシュ（M*A*S*H）」です。シニカルな笑いと独特のテンポで話題を呼び、昭和40年代後半の映画界に新鮮な風を吹かせました。"
+    }
+
+
+
+  ];
+
+  let currentQuestionIndex = 0;
+  let score = 0;
+
+  const progressText = document.getElementById("progress-text");
+  const questionText = document.getElementById("question-text");
+  const choicesContainer = document.getElementById("choices-container");
+  const resultArea = document.getElementById("result-area");
+  const judgeMark = document.getElementById("judge-mark");
+  const explanationText = document.getElementById("explanation-text");
+  const nextBtn = document.getElementById("next-btn");
+  const quizArea = document.getElementById("quiz-area");
+  const finalArea = document.getElementById("final-area");
+  const scoreText = document.getElementById("score-text");
+
+  // 問題の表示
+  function loadQuestion() {
+    resultArea.style.display = "none";
+    choicesContainer.innerHTML = "";
+
+    const currentQuiz = quizData[currentQuestionIndex];
+    progressText.textContent = `第 ${currentQuestionIndex + 1} 問 / 全 ${quizData.length} 問`;
+    questionText.textContent = currentQuiz.question;
+
+    currentQuiz.choices.forEach((choice, index) => {
+      const button = document.createElement("button");
+      button.textContent = choice;
+      button.className = "choice-btn";
+      button.onclick = () => selectAnswer(index);
+      choicesContainer.appendChild(button);
+    });
+  }
+
+  // 答えを選んだときの処理
+  function selectAnswer(selectedIndex) {
+    const currentQuiz = quizData[currentQuestionIndex];
+    const buttons = choicesContainer.querySelectorAll(".choice-btn");
+
+    buttons.forEach((btn, idx) => {
+      btn.disabled = true;
+      if (idx === currentQuiz.answer) {
+        btn.style.backgroundColor = "#fed7d7";
+        btn.style.borderColor = "#e53e3e";
+      }
+    });
+
+    resultArea.className = "result-area";
+    if (selectedIndex === currentQuiz.answer) {
+      playCorrectSound(); // 正解音を鳴らす
+      score++;
+      judgeMark.textContent = "〇 大正解！";
+      judgeMark.className = "judge-mark mark-correct";
+      resultArea.classList.add("result-correct");
+    } else {
+      playWrongSound(); // 不正解音を鳴らす
+      judgeMark.textContent = "? 残念！";
+      judgeMark.className = "judge-mark mark-wrong";
+      resultArea.classList.add("result-wrong");
+    }
+
+    explanationText.textContent = currentQuiz.explanation;
+    resultArea.style.display = "block";
+
+    if (currentQuestionIndex === quizData.length - 1) {
+      nextBtn.textContent = "結果を見る";
+    } else {
+      nextBtn.textContent = "次の問題へ進む";
+    }
+  }
+
+  // 次の問題へ
+  function nextQuestion() {
+    currentQuestionIndex++;
+    if (currentQuestionIndex < quizData.length) {
+      loadQuestion();
+    } else {
+      showFinalScore();
+    }
+  }
+
+  // 最終結果の表示
+  function showFinalScore() {
+    quizArea.style.display = "none";
+    finalArea.style.display = "block";
+    scoreText.textContent = `全 ${quizData.length} 問中、${score} 問正解でした！`;
+  }
+
+  // 最初からやり直す
+  function restartQuiz() {
+    currentQuestionIndex = 0;
+    score = 0;
+    finalArea.style.display = "none";
+    quizArea.style.display = "block";
+    loadQuestion();
+  }
+
+  // 初回読み込み
+  loadQuestion();
+</script>
+
+</body>
+</html>
